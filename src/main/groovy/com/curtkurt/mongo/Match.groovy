@@ -19,10 +19,12 @@ package com.curtkurt.mongo
 import com.mongodb.BasicDBList
 import com.mongodb.BasicDBObject
 import com.mongodb.DBObject
+import groovy.transform.ToString
 
 /**
  * Collection of $match aggregate operations
  */
+@ToString(excludes = ['builder','metaClass'], includeFields = true, includePackage = false)
 class Match implements MongoBuilder {
     private DBObject dbObject
     private QueryPipeBuilder builder
@@ -44,7 +46,9 @@ class Match implements MongoBuilder {
      * @return QueryPipeBuilder
      */
     QueryPipeBuilder equal(String field, value) {
-        dbObject = new BasicDBObject('$match', new BasicDBObject(field, value))
+        if ( value ) {
+            dbObject = new BasicDBObject('$match', new BasicDBObject(field, value))
+        }
         return builder
     }
 
@@ -53,15 +57,35 @@ class Match implements MongoBuilder {
      * <pre>
      * {@code
      *   //&#123;$match:&#123;field:null&#125;&#125;
-     *   builder.match().doesNotExist(field)
+     *   builder.match().isNull(field)
      * }
      * </pre>
      * @param field to not match on
      * @return QueryPipeBuilder
      */
-    QueryPipeBuilder doesNotExist(String field) {
-        return equal(field, null)
+    QueryPipeBuilder isNull(String field) {
+        dbObject = new BasicDBObject('$match', new BasicDBObject(field, null))
+        return builder
     }
+
+    /**
+     * Adds a $match of the field to null
+     *
+     * <pre>
+     * {@code
+     *   // &#123;$match: &#123;field:&#123;$exists:true&#125;&#125;&#125;
+     *   builder.matchExists(field)
+     * }
+     * </pre>
+     * @param field to match exists
+     * @param boolean exists true by default
+     * @return QueryPipeBuilder
+     */
+    QueryPipeBuilder exists(String field, boolean exists = true) {
+        dbObject = new BasicDBObject('$match', new BasicDBObject(field,new BasicDBObject('$exists',exists)))
+        return builder
+    }
+
 
     /**
      * Creates a $match on a field to a list of values using an $in operator
