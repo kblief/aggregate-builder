@@ -111,6 +111,7 @@ class QueryPipeBuilder {
 
     /**
      * Adds a $match to the pipeline
+     * Does not add if the value is null
      * <pre>
      * {@code
      *   // &#123;$match:&#123;field:value&#125;&#125;
@@ -122,7 +123,9 @@ class QueryPipeBuilder {
      * @return QueryPipeBuilder
      */
     QueryPipeBuilder match(String field, value) {
-        queryPipe << new BasicDBObject('$match', new BasicDBObject(field, value))
+        if ( null != value) {
+            queryPipe << new BasicDBObject('$match', new BasicDBObject(field, value))
+        }
         return this
     }
 
@@ -139,7 +142,25 @@ class QueryPipeBuilder {
      * @return QueryPipeBuilder
      */
     QueryPipeBuilder matchNull(String field) {
-        match(field, null)
+        queryPipe << new BasicDBObject('$match', new BasicDBObject(field, null))
+        return this
+    }
+
+    /**
+     * Adds a $match of the field to null
+     *
+     * <pre>
+     * {@code
+     *   // &#123;$match: &#123;field:&#123;$exists:exists&#125;&#125;&#125;
+     *   builder.matchExists(field)
+     * }
+     * </pre>
+     * @param field to match exists
+     * @param exists boolean, true is default
+     * @return QueryPipeBuilder
+     */
+    QueryPipeBuilder matchExists(String field, exists = true) {
+        queryPipe << new BasicDBObject('$match', new BasicDBObject(field,new BasicDBObject('$exists',exists)))
         return this
     }
 
@@ -296,6 +317,24 @@ class QueryPipeBuilder {
     }
 
     /**
+     * Skips specified number documents in the pipeline
+     * <pre>
+     * {@code
+     *   // $&#123;skip: 1&#125;
+     *   builder.skip(1)
+     * }
+     * </pre>
+     * @return QueryPipeBuilder
+     */
+    QueryPipeBuilder skip(int skip) {
+        if (! skip || skip < 0 ) {
+            throw new IllegalArgumentException("Parameter 'skip' must be positive integer")
+        }
+        queryPipe << new BasicDBObject('$skip',skip)
+        return this
+    }
+
+    /**
      * Adds a $group
      * <pre>
      * {@code
@@ -343,5 +382,4 @@ class QueryPipeBuilder {
     boolean isPopulated() {
         queryPipe ? true : false
     }
-
 }

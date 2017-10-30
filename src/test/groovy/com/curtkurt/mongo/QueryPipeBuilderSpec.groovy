@@ -141,7 +141,7 @@ class QueryPipeBuilderSpec extends Specification {
         def asc = ASC
 
         when: "I build add sort order and build the querypipe"
-        def queryPipe = builder.addSortOrder(field,asc).build()
+        def queryPipe = builder.addSortOrder(field, asc).build()
 
         then: "sort order should be in the query pipe"
         queryPipe[0].$sort.getAt(field) == ASC.value
@@ -153,7 +153,7 @@ class QueryPipeBuilderSpec extends Specification {
         def desc = DESC
 
         when: "I build add sort order and build the querypipe"
-        def queryPipe = builder.addSortOrder(field,desc).build()
+        def queryPipe = builder.addSortOrder(field, desc).build()
 
         then: "sort order should be in the query pipe"
         queryPipe[0].$sort.getAt(field) == DESC.value
@@ -186,7 +186,7 @@ class QueryPipeBuilderSpec extends Specification {
         def max = 100
 
         when: "I add pagination"
-        def queryPipe = builder.addPagination(max,0).build()
+        def queryPipe = builder.addPagination(max, 0).build()
 
         then: "skip is added to the queryPipe"
         queryPipe[0].$skip == QueryPipeBuilder.DEFAULT_OFFSET
@@ -200,7 +200,7 @@ class QueryPipeBuilderSpec extends Specification {
         def offset = 100
 
         when: "I add pagination"
-        def queryPipe = builder.addPagination(QueryPipeBuilder.DEFAULT_MAX,offset).build()
+        def queryPipe = builder.addPagination(QueryPipeBuilder.DEFAULT_MAX, offset).build()
 
         then: "skip is added to the queryPipe"
         queryPipe[0].$skip == offset
@@ -212,7 +212,7 @@ class QueryPipeBuilderSpec extends Specification {
     void "should add custom dbObject"() {
         given: "I have a custom DBObject"
         def field = 'field'
-        def thing = new BasicDBObject('$match',field)
+        def thing = new BasicDBObject('$match', field)
 
         when: "I add the custom object"
         def pipe = builder.addCustom(thing).build()
@@ -224,7 +224,7 @@ class QueryPipeBuilderSpec extends Specification {
 
     void "should say whether the pipe is populated"() {
         given: "I have a query pipe with at least one entry"
-        builder.match('field','value')
+        builder.match('field', 'value')
 
         when: "I check to see if the pipe is populated"
         def isPopulated = builder.isPopulated()
@@ -249,8 +249,8 @@ class QueryPipeBuilderSpec extends Specification {
     void "should create new instance of QueryPipeBuilder when copy is called"() {
         given: "I have a query pipe builder and I add conditions"
         builder.match()
-                .equal('field','value')
-                .addPagination(10,0)
+                .equal('field', 'value')
+                .addPagination(10, 0)
                 .addSortOrder('field', ASC)
 
         when: "I create a copy"
@@ -264,8 +264,8 @@ class QueryPipeBuilderSpec extends Specification {
     void "should create new instance of QueryPipeBuilder when copy is called and not have the same query pipe"() {
         given: "I have a query pipe builder and I add conditions"
         builder.match()
-                .equal('field','value')
-                .addPagination(10,0)
+                .equal('field', 'value')
+                .addPagination(10, 0)
                 .addSortOrder('field', ASC)
 
         when: "I create a copy"
@@ -287,7 +287,7 @@ class QueryPipeBuilderSpec extends Specification {
 
         then: "the group count is added for the field"
         pipe[0].$group._id.getAt(field) == "\$$field"
-        pipe[0].$group.count == [$sum:1]
+        pipe[0].$group.count == [$sum: 1]
 
     }
 
@@ -297,17 +297,17 @@ class QueryPipeBuilderSpec extends Specification {
         def sum = 0
 
         when: "I add a group count with non-default sum"
-        def pipe = builder.groupCount(field,sum).build()
+        def pipe = builder.groupCount(field, sum).build()
 
         then: "the group count is added for the field"
         pipe[0].$group._id.getAt(field) == "\$$field"
-        pipe[0].$group.count == [$sum:sum]
+        pipe[0].$group.count == [$sum: sum]
 
     }
 
     void "should copy a given list to a new QueryPipeBuilder"() {
         given: "I have a list as query pipeline"
-        def queryPipeline = new QueryPipeBuilder().match('field','value').build()
+        def queryPipeline = new QueryPipeBuilder().match('field', 'value').build()
 
         when: "I create a copy of the pipe"
         def copiedPipeline = QueryPipeBuilder.copy(queryPipeline)
@@ -319,16 +319,90 @@ class QueryPipeBuilderSpec extends Specification {
 
     void "should copy pipeline list to new query pipeline, but not be the same instance"() {
         given: "I have a list as query pipeline"
-        def queryPipeline = new QueryPipeBuilder().match('field','value').build()
+        def queryPipeline = new QueryPipeBuilder().match('field', 'value').build()
 
         when: "I create a copy of the pipe"
         def copiedPipeline = QueryPipeBuilder.copy(queryPipeline)
 
         and:
-        copiedPipeline.match('otherField','value')
+        copiedPipeline.match('otherField', 'value')
 
         then: "the new query pipeline is the same as the copied version"
         copiedPipeline.build() != queryPipeline
     }
 
+    void "should create a count pipeline entry"() {
+        when: "I do a count on the pipeline"
+        def count = new QueryPipeBuilder().count().build()
+
+        then: "the count is added"
+        count[0] == [$count: 'count']
+    }
+
+    void "should create a skip pipeline entry"() {
+        given: "I have a number of documents to skip"
+        def skip = 5
+
+        when: "I do a skip on the pipeline"
+        def count = new QueryPipeBuilder().skip(skip).build()
+
+        then: "the skip is added"
+        count[0] == [$skip: skip]
+    }
+
+    void "should throw exception when skip is negative"() {
+        given: "I have a negative number of documents to skip"
+        def skip = -5
+
+        when: "I do a skip on the pipeline"
+        def count = new QueryPipeBuilder().skip(skip).build()
+
+        then: "the skip is added"
+        def e = thrown(IllegalArgumentException)
+        e.message == "Parameter 'skip' must be positive integer"
+    }
+
+    void "should match field exists true"() {
+        given: "I have a field"
+        def field = 'field'
+
+        when: "I mactch exists"
+        def pipe = builder.matchExists(field).build()
+
+        then: "the match exists true is added to the pipeline"
+        pipe[0].$match.getAt(field).$exists
+    }
+
+    void "should match field exists false"() {
+        given: "I have a field"
+        def field = 'field'
+        def exists = false
+
+        when: "I mactch exists"
+        def pipe = builder.matchExists(field,exists).build()
+
+        then: "the match exists true is added to the pipeline"
+        pipe[0].$match.getAt(field).$exists == exists
+    }
+
+    void "should match field exists true, explicit"() {
+        given: "I have a field"
+        def field = 'field'
+        def exists = true
+
+        when: "I mactch exists"
+        def pipe = builder.matchExists(field,exists).build()
+
+        then: "the match exists true is added to the pipeline"
+        pipe[0].$match.getAt(field).$exists == exists
+    }
+
+    void "should throw exception if no match created"() {
+        when: "I have created a match"
+        builder.match().build()
+
+        then: "an exception is thrown"
+        def e = thrown(IllegalStateException)
+        e.message == 'Match is not defined'
+    }
 }

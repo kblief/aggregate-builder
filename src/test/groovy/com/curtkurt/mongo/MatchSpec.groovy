@@ -29,8 +29,8 @@ class MatchSpec extends Specification {
         given: "I have a field"
         def field = 'field'
 
-        when: "I call doesNotExist"
-        def result = builder.match().doesNotExist(field).build()
+        when: "I call isNull"
+        def result = builder.match().isNull(field).build()
 
         then: "the result has a match on field to null"
         result[0].$match.getAt(field) == null
@@ -119,5 +119,40 @@ class MatchSpec extends Specification {
 
         then: "or is instance of Andlist"
         and instanceof AndList
+    }
+
+    void "should match field exists true"() {
+        given: "I have a field"
+        def field = 'field'
+
+        when: "I mactch exists"
+        def pipe = builder.match().exists(field).build()
+
+        then: "the match exists true is added to the pipeline"
+        pipe[0].$match.getAt(field).$exists
+    }
+
+    void "should match field exists false"() {
+        given: "I have a field"
+        def field = 'field'
+        def exists = false
+
+        when: "I mactch exists"
+        def pipe = builder.match().exists(field,exists).build()
+
+        then: "the match exists true is added to the pipeline"
+        pipe[0].$match.getAt(field).$exists == exists
+    }
+
+    void "should match field exists true, explicit"() {
+        given: "I have a field"
+        def field = 'field'
+        def exists = true
+
+        when: "I mactch exists"
+        def pipe = builder.match().exists(field,exists).build()
+
+        then: "the match exists true is added to the pipeline"
+        pipe[0].$match.getAt(field).$exists == exists
     }
 }

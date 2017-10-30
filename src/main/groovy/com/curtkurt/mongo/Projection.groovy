@@ -20,12 +20,12 @@ import com.mongodb.BasicDBObject
 import com.mongodb.DBObject
 
 
-class Project {
+class Projection {
 
     private DBObject dbObject
     private QueryPipeBuilder builder
 
-    Project(QueryPipeBuilder builder) {
+    Projection(QueryPipeBuilder builder) {
         this.builder = builder
     }
 
