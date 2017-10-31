@@ -10,8 +10,6 @@ import spock.lang.Subject
 class MatchSpec extends Specification {
 
     private QueryPipeBuilder builder = new QueryPipeBuilder()
-    @Subject
-    private Match match = new Match(builder)
 
     void "should create a match equals on the field and value"() {
         given: "I have a field and value"
