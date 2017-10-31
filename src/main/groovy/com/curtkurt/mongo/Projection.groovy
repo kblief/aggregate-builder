@@ -18,9 +18,13 @@ package com.curtkurt.mongo
 
 import com.mongodb.BasicDBObject
 import com.mongodb.DBObject
+import groovy.transform.ToString
 
-
-class Projection {
+/**
+ * Adds a $project to query pipeline
+ */
+@ToString(includeFields = true, excludes = ['builder','metaClass'])
+class Projection implements MongoBuilder{
 
     private DBObject dbObject
     private QueryPipeBuilder builder
@@ -29,8 +33,37 @@ class Projection {
         this.builder = builder
     }
 
-    QueryPipeBuilder include(GroovyObject obj) {
-        dbObject = new BasicDBObject('$match', new BasicDBObject(field, value))
+    /**
+     * Creates a $project of fields in collection
+     * <pre>
+     * {@code
+     *   // &#123;$project:&#123;field:displayValue&#125;&#125;
+     *   builder.projection().project(fields)
+     * }
+     * </pre>
+     *
+     * The fields map is fieldname to 1 or 0.
+     * A 1 is to show the field, a 0 is to hide a field.
+     * A field not included is hidden with the exception of the
+     * _id field.  The _id field has to be explicitly hidden with a 0
+     *
+     * @param fields to project from collection
+     * @return QueryPipeBuilder
+     */
+    QueryPipeBuilder project(Map <String,Integer> fields) {
+        dbObject = new BasicDBObject('$project', fields)
+        return builder
     }
 
+    /**
+     * Builds the Projection object; builds and {@link MongoBuilder} types in the $project
+     * @return DBObject
+     */
+    @Override
+    DBObject build() {
+        if (!dbObject) {
+            throw new IllegalStateException('Projection is not defined')
+        }
+        return dbObject
+    }
 }

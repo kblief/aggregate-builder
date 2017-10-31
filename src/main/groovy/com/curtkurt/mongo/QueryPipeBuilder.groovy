@@ -376,6 +376,18 @@ class QueryPipeBuilder {
     }
 
     /**
+     * Adds a Projection
+     *
+     * @see Projection
+     * @return Projection
+     */
+    Projection projection() {
+        def projection = new Projection(this)
+        queryPipe << projection
+        return projection
+    }
+
+    /**
      * Indication whether the query pipeline has been populated or is empty
      * @return boolean
      */
