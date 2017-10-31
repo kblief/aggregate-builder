@@ -35,6 +35,23 @@ class AndList extends ListBuilder {
     }
 
     /**
+     * Adds an equal on a field and value to an AndList
+     * <pre>
+     * {@code
+     *   // ...&#123;$and:[&#123;field:value&#125;]&#125;
+     *   ... .or().equal(field,value)
+     * }
+     * </pre>
+     * @param field to equal
+     * @param value to match
+     * @return OrList
+     */
+    AndList eq(String field, value) {
+        list << new BasicDBObject(field,value)
+        return this
+    }
+
+    /**
      * Adds a $gt on field with a value
      * <pre>
      * {@code

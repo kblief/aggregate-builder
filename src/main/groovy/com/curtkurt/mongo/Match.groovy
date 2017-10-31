@@ -53,6 +53,17 @@ class Match implements MongoBuilder {
     }
 
     /**
+     * Creates a $match on field $elemMatch of object as map
+     * @param field to elemMatch on
+     * @param element as Map of object
+     * @return QueryPipeBuilder
+     */
+    QueryPipeBuilder elemMatch(String field, Map element) {
+        dbObject = new BasicDBObject('$match', new BasicDBObject(field, new BasicDBObject('$elemMatch',element)))
+        return builder
+    }
+
+    /**
      * Creates a $match on 'null'
      * <pre>
      * {@code
