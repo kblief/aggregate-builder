@@ -153,4 +153,17 @@ class MatchSpec extends Specification {
         then: "the match exists true is added to the pipeline"
         pipe[0].$match.getAt(field).$exists == exists
     }
+
+    void "should do an elemMatch on a field"() {
+        given: "I have an element to match to a field"
+        def field = 'field'
+        def element = [a:'a_value',b:'b_value']
+
+        when: "I create an elemMatch"
+        def pipe = builder.match().elemMatch(field,element).build()
+
+        then: "the pipe contains an elemMatch on the field"
+        pipe[0].$match.getAt(field).$elemMatch == element
+
+    }
 }
