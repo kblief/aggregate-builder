@@ -103,4 +103,16 @@ class AndListSpec extends Specification {
         then: "the result is the query pipe builder"
         result == builder
     }
+
+    void "should create an or equals"() {
+        given: "I have a field and value"
+        def field = 'field'
+        def value = 'value'
+
+        when: "I call equal"
+        def result = builder.match().and().eq(field, value).end().build()
+
+        then: "I get an or with field to value"
+        result[0].$match.$and[0].getAt(field) == value
+    }
 }
