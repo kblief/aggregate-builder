@@ -53,6 +53,25 @@ class Match implements MongoBuilder {
     }
 
     /**
+     * Creates a $match of field to value
+     * <pre>
+     * {@code
+     *   // &#123;$match:&#123;field:&#123;$ne:value&#125;&#125;&#125;
+     *   builder.match().notEqual(field,value)
+     * }
+     * </pre>
+     * @param field to match
+     * @param value value to match
+     * @return QueryPipeBuilder
+     */
+    QueryPipeBuilder notEqual(String field, value) {
+        if ( value ) {
+            dbObject = new BasicDBObject('$match', new BasicDBObject(field, new BasicDBObject('$ne', value)))
+        }
+        return builder
+    }
+
+    /**
      * Creates a $match on field $elemMatch of object as map
      * @param field to elemMatch on
      * @param element as Map of object

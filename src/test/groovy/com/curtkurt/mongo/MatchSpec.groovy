@@ -164,6 +164,17 @@ class MatchSpec extends Specification {
 
         then: "the pipe contains an elemMatch on the field"
         pipe[0].$match.getAt(field).$elemMatch == element
+    }
 
+    void "should add a match ne value to pipeline"() {
+        given: "I have an field to not match"
+        def field = 'field'
+        def value = 'value'
+
+        when: "I create an elemMatch"
+        def pipe = builder.match().notEqual(field,value).build()
+
+        then: "the pipe contains an elemMatch on the field"
+        pipe[0].$match.getAt(field).$ne == value
     }
 }
