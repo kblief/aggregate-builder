@@ -1,11 +1,22 @@
 /*******************************************************************************
- * Copyright (c) Dodge Data & Analytics 2016 - 2017
+ * Copyright 2018 Kurt Bliefernich
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  ******************************************************************************/
 
 package com.curtkurt.mongo
 
 import spock.lang.Specification
-import spock.lang.Subject
 
 class MatchSpec extends Specification {
 
@@ -157,24 +168,47 @@ class MatchSpec extends Specification {
     void "should do an elemMatch on a field"() {
         given: "I have an element to match to a field"
         def field = 'field'
-        def element = [a:'a_value',b:'b_value']
+        def element = [a: 'a_value', b: 'b_value']
 
         when: "I create an elemMatch"
-        def pipe = builder.match().elemMatch(field,element).build()
+        def pipe = builder.match().elemMatch(field, element).build()
 
         then: "the pipe contains an elemMatch on the field"
         pipe[0].$match.getAt(field).$elemMatch == element
     }
 
-    void "should add a match ne value to pipeline"() {
-        given: "I have an field to not match"
+    void "should create a match not equals on the field and value"() {
+        given: "I have a field and value"
         def field = 'field'
-        def value = 'value'
+        def value = 'test.value'
 
-        when: "I create an elemMatch"
-        def pipe = builder.match().notEqual(field,value).build()
+        when: "I call notEqual"
+        def result = builder.match().notEqual(field, value).build()
 
-        then: "the pipe contains an elemMatch on the field"
-        pipe[0].$match.getAt(field).$ne == value
+        then: "the result does not contains a match on the field and value"
+        result[0].$match.getAt(field).$ne == value
+    }
+
+    void "should create a match not equals on the field and null"() {
+        given: "I have a field and value"
+        def field = 'field'
+
+        when: "I call notEqual"
+        def result = builder.match().notEqualNull(field).build()
+
+        then: "the result does not contains a match on the field and null"
+        result[0].$match.getAt(field).$ne == null
+    }
+
+    void "should create a match greater than on the field and value"() {
+        given: "I have a field and value"
+        def field = 'field'
+        def value = 2
+
+        when: "I call greaterThan"
+        def result = builder.match().greaterThan(field, value).build()
+
+        then: "the result does contains a match greater than on the field and value"
+        result[0].$match.getAt(field).$gt == value
     }
 }

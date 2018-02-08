@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright 2017 Kurt Bliefernich
+ * Copyright 2018 Kurt Bliefernich
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import groovy.transform.ToString
 /**
  * Collection of $match aggregate operations
  */
-@ToString(excludes = ['builder','metaClass'], includeFields = true, includePackage = false)
+@ToString(includeFields = true, excludes = ['builder', 'metaClass', 'parent'], includePackage = false)
 class Match implements MongoBuilder {
     private DBObject dbObject
     private QueryPipeBuilder builder
@@ -262,6 +262,42 @@ class Match implements MongoBuilder {
         def notList = new NotList(builder)
         dbObject = new BasicDBObject('$match', notList)
         return notList
+    }
+
+
+
+    /**
+     * Creates a $match of field to value
+     * <pre>
+     * {@code
+     *   // &#123;$match:&#123;field:&#123;$ne:null&#125;&#125;&#125;
+     *   builder.match().notEqualNull(field)
+     *}
+     * </pre>
+     * @param field to match
+     * @param value value to match
+     * @return QueryPipeBuilder
+     */
+    QueryPipeBuilder notEqualNull(String field) {
+        dbObject = new BasicDBObject('$match', new BasicDBObject(field, new BasicDBObject('$ne', null)))
+        return builder
+    }
+
+    /**
+     * Creates a $gt of field to value
+     * <pre>
+     * {@code
+     *   // &#123;$gt:&#123;field:value&#125;&#125;
+     *   builder.match().greaterThan(field,value)
+     *}
+     * </pre>
+     * @param field - to match greater than value
+     * @param value - integer value
+     * @return QueryPipeBuilder
+     */
+    QueryPipeBuilder greaterThan(String field, int value) {
+        dbObject = new BasicDBObject('$match', new BasicDBObject(field, new BasicDBObject('$gt', value)))
+        return builder
     }
 
     /**

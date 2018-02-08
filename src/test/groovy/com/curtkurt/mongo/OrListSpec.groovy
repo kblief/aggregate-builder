@@ -1,5 +1,17 @@
 /*******************************************************************************
- * Copyright (c) Dodge Data & Analytics 2016 - 2017
+ * Copyright 2018 Kurt Bliefernich
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  ******************************************************************************/
 
 package com.curtkurt.mongo
@@ -9,6 +21,18 @@ import spock.lang.Specification
 class OrListSpec extends Specification {
 
     def builder = new QueryPipeBuilder()
+
+    void "should create an or entry of greater than"() {
+        given: "I have a field"
+        def field = 'field'
+        def value = 100
+
+        when: "I do an and().gt"
+        def result = builder.match().or().gt(field, value).end().build()
+
+        then: "I have an or entry of field gt value"
+        result[0].$match.$or[0].getAt(field).$gt == value
+    }
 
     void "should create an or equals"() {
         given: "I have a field and value"

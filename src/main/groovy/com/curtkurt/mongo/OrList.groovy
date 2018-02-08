@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright 2017 Kurt Bliefernich
+ * Copyright 2018 Kurt Bliefernich
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package com.curtkurt.mongo
 import com.mongodb.BasicDBList
 import com.mongodb.BasicDBObject
 import com.mongodb.DBObject
+import groovy.transform.ToString
 
 /**
  * Represents an $or in mongo aggregate.
@@ -26,12 +27,30 @@ import com.mongodb.DBObject
  *
  * @see {ListBuilder}
  */
+@ToString(includeFields = true, excludes = ['builder', 'metaClass', 'parent'], includePackage = false)
 class OrList extends ListBuilder {
     private DBObject dbObject
 
     OrList(QueryPipeBuilder builder) {
         super(builder)
         dbObject = new BasicDBObject('$or',list)
+    }
+
+    /**
+     * Adds a $gt on field with a value
+     * <pre>
+     * {@code
+     *   // ...&#123;$or:[&#123;field:&#123;$gt:value&#125;&#125;]&#125;
+     *   ... .or().gt(field,value)
+     * }
+     * </pre>
+     * @param field to perform gt on
+     * @param value to be gt
+     * @return OrList
+     */
+    OrList gt(String field, value) {
+        list << new BasicDBObject(field, new BasicDBObject('$gt', value))
+        return this
     }
 
     /**

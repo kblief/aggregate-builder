@@ -20,41 +20,49 @@ import com.mongodb.BasicDBObject
 import com.mongodb.DBObject
 import groovy.transform.ToString
 
+@ToString(includeFields = true, excludes = ['builder', 'metaClass', 'parent'])
+class Size implements MongoBuilder {
 
-/**
- * Adds a $filter to query pipeline
- */
-@ToString(includeFields = true, excludes = ['builder', 'metaClass', 'parent'], includePackage = false)
-class Filter implements MongoBuilder {
     private DBObject dbObject
     private QueryPipeBuilder builder
     private MongoBuilder parent
 
-    Filter(QueryPipeBuilder builder, String field, MongoBuilder parent, String asName = "${field}_") {
-        dbObject = new BasicDBObject('$filter', new BasicDBObject([input: "\$$field", as: "$asName"]))
+    Size(QueryPipeBuilder builder, MongoBuilder parent) {
         this.builder = builder
         this.parent = parent
     }
 
-    Condition cond() {
-        def condition = new Condition(builder,parent)
-        dbObject.$filter.cond = condition
-        return condition
+    /**
+     *
+     * @param arrayField to filter
+     * @param options
+     * @return
+     */
+    Filter filter(String field, String asName = null) {
+        def filter = new Filter(builder, field, parent, asName)
+        dbObject = new BasicDBObject('$size', filter)
+        return filter
     }
 
+    MongoBuilder size(String field) {
+        dbObject = new BasicDBObject('$size', "\$$field")
+        return parent
+    }
 
+    /**
+     * Builds the Size object; builds and {@link MongoBuilder} types in the $size
+     * @return DBObject
+     */
     @Override
-    def build() {
-        if (!dbObject.$filter.cond) {
-            throw new IllegalStateException('Filter requires an array to operate on with a condition')
+    DBObject build() {
+        if (!dbObject || !dbObject.$size ) {
+            throw new IllegalStateException('Size is not defined')
         }
-
-        if (dbObject.$filter.cond instanceof MongoBuilder) {
-            def cond = dbObject.$filter.remove('cond')
-            dbObject.$filter << cond.build()
+        dbObject.each { k,v ->
+            if ( v instanceof MongoBuilder ) {
+                dbObject[k] = v.build()
+            }
         }
-
-        dbObject
+        return dbObject
     }
-
 }

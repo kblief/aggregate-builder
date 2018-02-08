@@ -1,12 +1,26 @@
 /*******************************************************************************
- * Copyright (c) Dodge Data & Analytics 2016 - 2017
+ * Copyright 2018 Kurt Bliefernich
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  ******************************************************************************/
 
 package com.curtkurt.mongo
 
 import com.mongodb.BasicDBObject
+import com.mongodb.DBObject
 import spock.lang.Specification
 import spock.lang.Subject
+import spock.lang.Unroll
 
 import static com.curtkurt.mongo.QueryPipeBuilder.Sort.ASC
 import static com.curtkurt.mongo.QueryPipeBuilder.Sort.DESC
@@ -27,6 +41,25 @@ class QueryPipeBuilderSpec extends Specification {
 
         then: "the querypipe contains a match on that field and value"
         queryPipe[0].$match.getAt(field) == value
+    }
+
+    @Unroll
+    void "should not add match to queryPipe when value is falsey"() {
+        given: "I have a field and value"
+        String field = "a"
+        String value = fieldValue
+
+        when: "I build a queryPipe with a match on the field and value"
+        builder.match(field, value)
+        def queryPipe = builder.build()
+
+        then: "the querypipe contains a match on that field and value"
+        queryPipe[0]?.$match?.getAt(field) == outcome
+
+        where:
+        fieldValue | outcome
+        null       | null
+        ""         | ""
     }
 
     void "should add match null to querypipe"() {
@@ -135,6 +168,25 @@ class QueryPipeBuilderSpec extends Specification {
 
     }
 
+    void "should add defined join to querypipe without unwind"() {
+        given: "I have a field and a defined join"
+        def field = 'field'
+        def fieldConfig = [from        : 'collection',
+                           localField  : 'localField',
+                           foreignField: 'foreignField',
+                           as          : 'as',
+                           outerJoin   : true]
+
+        when: "I add a defined join"
+        def queryPipe = builder.lookup(field, fieldConfig).build()
+
+        then: "the querypipe contains the lookup"
+        queryPipe[0].$lookup.from == fieldConfig.from
+        queryPipe[0].$lookup.localField == fieldConfig.localField
+        queryPipe[0].$lookup.foreignField == fieldConfig.foreignField
+        queryPipe[0].$lookup.as == fieldConfig.as
+    }
+
     void "should add asc sort order to the querypipe"() {
         given: "I have a field and an asc order"
         def field = 'field'
@@ -168,6 +220,17 @@ class QueryPipeBuilderSpec extends Specification {
 
         then: "sort order should be in the query pipe"
         queryPipe[0].$sort.getAt(field) == ASC.value
+    }
+
+    void "should not add sort if the field is null"() {
+        given: "I have a null field"
+        def field = null
+
+        when: "I add sort"
+        def pipe = builder.addSortOrder(field, QueryPipeBuilder.Sort.ASC).build()
+
+        then: "the pipeline does not have a sort"
+        pipe.isEmpty()
     }
 
     void "should add pagination to the querypipe"() {
@@ -305,6 +368,21 @@ class QueryPipeBuilderSpec extends Specification {
 
     }
 
+    void "should add group count with sum and document field"() {
+        given: "I have a field"
+        def field = 'field'
+        def docField = 'subdoc.field'
+        def sum = 0
+
+        when: "I add a group count with non-default sum"
+        def pipe = builder.groupCount(field, sum, docField).build()
+
+        then: "the group count is added for the field"
+        pipe[0].$group._id.getAt(field) == "\$$docField"
+        pipe[0].$group.count == [$sum: sum]
+
+    }
+
     void "should copy a given list to a new QueryPipeBuilder"() {
         given: "I have a list as query pipeline"
         def queryPipeline = new QueryPipeBuilder().match('field', 'value').build()
@@ -404,5 +482,57 @@ class QueryPipeBuilderSpec extends Specification {
         then: "an exception is thrown"
         def e = thrown(IllegalStateException)
         e.message == 'Match is not defined'
+    }
+
+    void "should add filter to pipeline"() {
+        given: "I have a field to filter"
+        def field = 'field'
+
+        when: "I add a filter"
+        def filter = builder.filter(field)
+
+        then: "an instance of filter is returned"
+        filter instanceof Filter
+
+    }
+
+    void "should add all DBObjects in a list to the query pipeline"() {
+        given: "I have a list of DBObjects"
+        def list = [new BasicDBObject('field', 'value'), new BasicDBObject('field2', 'value2'), [field3: 'value3']]
+
+        when: "I addAll to the pipeline"
+        def pipe = builder.addAll(list).build()
+
+        then: "the pipe has the values in the list"
+        pipe.size() == 2
+        pipe[0].field == 'value'
+        pipe[1].field2 == 'value2'
+    }
+
+    void "should add  DBObjects in a list to the query pipeline with leftShift"() {
+        given: "I have a list of DBObjects"
+        DBObject dbObject = new BasicDBObject('field', 'value')
+
+        when: "I addAll to the pipeline"
+        builder << dbObject
+        def pipe = builder.build()
+
+        then: "the pipe has the values in the list"
+        pipe.size() == 1
+        pipe[0].field == 'value'
+    }
+
+    void "should add all DBObjects in a list to the query pipeline with leftShift"() {
+        given: "I have a list of DBObjects"
+        def list = [new BasicDBObject('field', 'value'), new BasicDBObject('field2', 'value2'), [field3: 'value3']]
+
+        when: "I addAll to the pipeline"
+        builder << list
+        def pipe = builder.build()
+
+        then: "the pipe has the values in the list"
+        pipe.size() == 2
+        pipe[0].field == 'value'
+        pipe[1].field2 == 'value2'
     }
 }

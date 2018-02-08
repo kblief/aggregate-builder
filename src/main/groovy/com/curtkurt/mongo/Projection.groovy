@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright 2017 Kurt Bliefernich
+ * Copyright 2018 Kurt Bliefernich
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,8 +23,8 @@ import groovy.transform.ToString
 /**
  * Adds a $project to query pipeline
  */
-@ToString(includeFields = true, excludes = ['builder','metaClass'])
-class Projection implements MongoBuilder{
+@ToString(includeFields = true, excludes = ['builder', 'metaClass'])
+class Projection implements MongoBuilder {
 
     private DBObject dbObject
     private QueryPipeBuilder builder
@@ -39,7 +39,7 @@ class Projection implements MongoBuilder{
      * {@code
      *   // &#123;$project:&#123;field:displayValue&#125;&#125;
      *   builder.projection().project(fields)
-     * }
+     *}
      * </pre>
      *
      * The fields map is fieldname to 1 or 0.
@@ -50,8 +50,62 @@ class Projection implements MongoBuilder{
      * @param fields to project from collection
      * @return QueryPipeBuilder
      */
-    QueryPipeBuilder project(Map <String,Integer> fields) {
+    Projection project(Map<String, Integer> fields) {
         dbObject = new BasicDBObject('$project', fields)
+        return this
+    }
+
+    /**
+     *
+     * @param fieldName
+     * @param field
+     * @return
+     */
+    Projection size(String fieldName, String field) {
+        if (dbObject?.$project) {
+            dbObject.$project << new BasicDBObject(fieldName, new BasicDBObject('$size', "\$$field"))
+        } else {
+            dbObject = new BasicDBObject('$project', new BasicDBObject(fieldName, new BasicDBObject('$size', "\$$field")))
+        }
+
+        return this
+    }
+
+    /**
+     *
+     * @param fieldName
+     * @param field
+     * @return
+     */
+    Size size(String fieldName) {
+        Size size = new Size(builder, this)
+        if (dbObject && dbObject.$project) {
+            dbObject.$project << new BasicDBObject(fieldName, size)
+        } else {
+            dbObject = new BasicDBObject('$project', new BasicDBObject(fieldName, size))
+        }
+
+        return size
+    }
+
+    /**
+     *
+     * @param arrayField to filter
+     * @param options
+     * @return
+     */
+    Filter filter(String field, String asField = null) {
+        def filter = new Filter(builder, field, this, asField)
+        def filterField = new BasicDBObject(field, filter)
+        if (dbObject && dbObject.$project) {
+            dbObject.$project << filterField
+        } else {
+            dbObject = new BasicDBObject('$project', filterField)
+        }
+        return filter
+    }
+
+    QueryPipeBuilder end() {
         return builder
     }
 
@@ -61,8 +115,13 @@ class Projection implements MongoBuilder{
      */
     @Override
     DBObject build() {
-        if (!dbObject) {
+        if (!dbObject || !dbObject.$project) {
             throw new IllegalStateException('Projection is not defined')
+        }
+        dbObject.$project.each { k, v ->
+            if (v instanceof MongoBuilder) {
+                dbObject.$project[k] = v.build()
+            }
         }
         return dbObject
     }

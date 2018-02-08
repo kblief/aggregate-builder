@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright 2017 Kurt Bliefernich
+ * Copyright 2018 Kurt Bliefernich
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,17 +18,16 @@ package com.curtkurt.mongo
 
 import spock.lang.Specification
 
-
 class ProjectionSpec extends Specification {
 
     private QueryPipeBuilder builder = new QueryPipeBuilder()
 
     void "should add projection of fields"() {
         given: "I have a map of fields"
-        def fields = [field:1,otherField:1,hiddenField:0]
+        def fields = [field: 1, otherField: 1, hiddenField: 0]
 
         when: "I add a projection"
-        def pipe = builder.projection().project(fields).build()
+        def pipe = builder.projection().project(fields).end().build()
 
         then: "the result has a \$project added with the fields"
         pipe[0].$project.field == 1
@@ -43,6 +42,16 @@ class ProjectionSpec extends Specification {
         then: "an exception is thrown"
         def e = thrown(IllegalStateException)
         e.message == 'Projection is not defined'
+    }
 
+    void "should create a size class when size is called"() {
+        given: "I have a field that I want assigned to size"
+        def sizeField = 'sizeField'
+
+        when: "I create a projection with size"
+        def size = builder.projection().size(sizeField)
+
+        then: "a size instance is returned"
+        size instanceof Size
     }
 }

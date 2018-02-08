@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright 2017 Kurt Bliefernich
+ * Copyright 2018 Kurt Bliefernich
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,15 +26,15 @@ import groovy.util.logging.Slf4j
  * Builder for a mongo aggregate query pipeline
  * <pre>
  * {@code
- *   QueryPipeBuilder builder = new QueryPipeBuilder()
+ * QueryPipeBuilder builder = new QueryPipeBuilder()
  *   builder.&#123;method&#125;
  * def queryPipeline = builder.build()
- * }
+ *}
  * </pre>
  */
-@ToString(includes='queryPipe', includeFields = true, includeNames = true)
+@ToString(includes = 'queryPipe', includeFields = true, includeNames = true, includePackage = false)
 @Slf4j(value = "log")
-class QueryPipeBuilder {
+class QueryPipeBuilder implements MongoBuilder {
 
     static final int DEFAULT_MAX = 100
     static final int DEFAULT_OFFSET = 0
@@ -55,6 +55,13 @@ class QueryPipeBuilder {
         int getValue() {
             return value
         }
+
+        static Sort from(String sort) {
+            if ( sort ) {
+                return valueOf(sort.toUpperCase())
+            }
+            return ASC
+        }
     }
 
     private List queryPipe
@@ -63,7 +70,7 @@ class QueryPipeBuilder {
      * Creates the query pipeline builder
      */
     QueryPipeBuilder() {
-        this.queryPipe = []
+        this.queryPipe = new BasicDBList()
     }
 
     /**
@@ -98,7 +105,7 @@ class QueryPipeBuilder {
     List build() {
         def cleanPipe = []
         queryPipe.each {
-            if ( it instanceof MongoBuilder) {
+            if (it instanceof MongoBuilder) {
                 cleanPipe << it.build()
 
             } else {
@@ -204,12 +211,12 @@ class QueryPipeBuilder {
 
     /**
      * Adds an $unwind on a field
-     *<pre>
+     * <pre>
      * {@code
      *   // &#123;$unwind: &#123;path: "$field", preserveNullAndEmptyArrays: true/false&#125;&#125;
      *   builder.unwind(field)
      *   builder.unwind(field,[outerJoin:true])
-     * }
+     *}
      * </pre>
      * @param field to unwind
      * @param fieldConfig [outerJoin:true/false] to preserve null and empty arrays
@@ -218,17 +225,17 @@ class QueryPipeBuilder {
     QueryPipeBuilder unwindField(String field, Map fieldConfig = [outerJoin: false]) {
         queryPipe << new BasicDBObject('$unwind',
                 new BasicDBObject([path                      : '$' + field,
-                                   preserveNullAndEmptyArrays: fieldConfig?.outerJoin?:false]))
+                                   preserveNullAndEmptyArrays: fieldConfig?.outerJoin ?: false]))
         return this
     }
 
     /**
      * Adds a $lookup
-     *<pre>
+     * <pre>
      * {@code
      *   // &#123;$lookup:&#123;from:field, localField: field, foreignField: '_id', as: field&#125;&#125;
      *   builder.addBasicJoin(field)
-     * }
+     *}
      * </pre>
      * @param field to lookup
      * @return QueryPipeBuilder
@@ -248,7 +255,7 @@ class QueryPipeBuilder {
      * {@code
      *   // &#123;$lookup:&#123;from:'from', localField: 'local', foreignField: 'foreign', as: 'as'&#125;&#125;
      *   builder.addJoin(null,[[from: 'from',localField: 'local', foreignField: 'foreign', as: 'as']])
-     * }
+     *}
      * </pre>
      * @param field to lookup
      * @param fieldConfig options [from: ,localField: , foreignField: , as: ]
@@ -267,20 +274,45 @@ class QueryPipeBuilder {
     }
 
     /**
+     * Adds a defined $lookup
+     * <pre>
+     * {@code
+     *   // &#123;$lookup:&#123;from:'from', localField: 'local', foreignField: 'foreign', as: 'as'&#125;&#125;
+     *   builder.lookup(null,[[from: 'from',localField: 'local', foreignField: 'foreign', as: 'as']])
+     *}
+     * </pre>
+     * @param field to lookup
+     * @param fieldConfig options [from: ,localField: , foreignField: , as: ]
+     * @return QueryPipeBuilder
+     */
+    QueryPipeBuilder lookup(String field, Map fieldConfig) {
+        DBObject lookup = new BasicDBObject(['$lookup': [
+                'from'        : fieldConfig.from ?: field,
+                'localField'  : fieldConfig.localField ?: field,
+                'foreignField': fieldConfig.foreignField ?: '_id',
+                'as'          : fieldConfig.as ?: field
+        ]])
+        queryPipe << lookup
+        return this
+    }
+
+    /**
      * Adds sort order; defaults to ascending
      * <pre>
      * {@code
      *   // &#123;$sort:&#123;field:'asc'&#125;&#125;
      *   builder.addSortOrder(field)
      *   builder.addSortOrder(field,Sort.ASC)
-     * }
+     *}
      * </pre>
      * @param field to sort on
      * @param sortOrder Sort.ASC/Sort.DESC
      * @return QueryPipeBuilder
      */
     QueryPipeBuilder addSortOrder(String field, Sort sortOrder = Sort.ASC) {
-        queryPipe << new BasicDBObject('$sort', new BasicDBObject(field, sortOrder.value))
+        if ( field ) {
+            queryPipe << new BasicDBObject('$sort', new BasicDBObject(field, sortOrder.value))
+        }
         return this
     }
 
@@ -290,13 +322,15 @@ class QueryPipeBuilder {
      * {@code
      *   // &#123;$skip: offset&#125;, &#123;$limit: max&#125;
      *   builder.addPagination(max,offset)
-     * }
+     *}
      * </pre>
      * @param max number of results
      * @param offset of the result set
      * @return QueryPipeBuilder
      */
-    QueryPipeBuilder addPagination(int max = DEFAULT_MAX, int offset) {
+    QueryPipeBuilder addPagination(Integer max = DEFAULT_MAX, Integer offset) {
+        max = max ?: DEFAULT_MAX
+        offset = offset ?: DEFAULT_OFFSET
         queryPipe += [new BasicDBObject('$skip', offset), new BasicDBObject('$limit', max)]
         return this
     }
@@ -307,12 +341,12 @@ class QueryPipeBuilder {
      * {@code
      *   // $&#123;count: 'count'&#125;
      *   builder.count()
-     * }
+     *}
      * </pre>
      * @return QueryPipeBuilder
      */
     QueryPipeBuilder count() {
-        queryPipe << new BasicDBObject('$count','count')
+        queryPipe << new BasicDBObject('$count', 'count')
         return this
     }
 
@@ -340,14 +374,15 @@ class QueryPipeBuilder {
      * {@code
      *   // &#123;$group:&#123;_id:$field,count:&#123;$sum:1&#125;&#125;&#125;
      *   builder.groupCount(field)
-     * }
+     *}
      * </pre>
      * @param field to group and sum on
      * @param value of the sum - defaults to 1
      * @return QueryPipeBuilder
      */
-    QueryPipeBuilder groupCount(String field, sum = 1) {
-        DBObject groupHost = new BasicDBObject('_id', new BasicDBObject(field, "\$$field"))
+    QueryPipeBuilder groupCount(String field, sum = 1, String docField = null) {
+        docField = docField ?: field
+        DBObject groupHost = new BasicDBObject('_id', new BasicDBObject(field, "\$$docField"))
         groupHost.append('count', new BasicDBObject('$sum', sum))
         queryPipe << new BasicDBObject('$group', groupHost)
         return this
@@ -360,6 +395,19 @@ class QueryPipeBuilder {
      */
     QueryPipeBuilder addCustom(DBObject dbObject) {
         queryPipe << dbObject
+        return this
+    }
+
+    /**
+     * Adds all of the DBObjects in the list to the pipeline
+     * @param list of DBObjects
+     */
+    QueryPipeBuilder addAll(List list) {
+        list.each {
+            if ( it instanceof DBObject ) {
+                queryPipe << it
+            }
+        }
         return this
     }
 
@@ -388,10 +436,38 @@ class QueryPipeBuilder {
     }
 
     /**
+     * Adds a Filter
+     *
+     * @see Filter
+     * @return Filter
+     */
+    Filter filter(String field, String asField = null) {
+        def filter = new Filter(this, field, this, asField)
+        queryPipe << filter
+        return filter
+    }
+
+    GeoNear geoNear() {
+        def geoNear = new GeoNear(this)
+        queryPipe = [geoNear] + queryPipe // geoNear MUST be first in pipeline
+        return geoNear
+    }
+
+    /**
      * Indication whether the query pipeline has been populated or is empty
      * @return boolean
      */
     boolean isPopulated() {
         queryPipe ? true : false
     }
+
+    QueryPipeBuilder leftShift(DBObject dbObject) {
+        queryPipe << dbObject
+        return this
+    }
+
+    QueryPipeBuilder leftShift(List<DBObject> dbObjects) {
+        addAll(dbObjects)
+    }
+
 }
